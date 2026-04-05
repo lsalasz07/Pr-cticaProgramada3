@@ -1,0 +1,86 @@
+﻿@{
+    ViewData["Title"] = "Crear Evento";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <h3 class="card-title mb-4">➕ Crear Nuevo Evento</h3>
+
+                <div id="alertCrear" class="alert d-none"></div>
+
+                <div class="mb-3">
+                    <label class="form-label">Nombre del evento</label>
+                    <input type="text" id="evNombre" class="form-control" placeholder="Ej: Concierto de Rock" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Fecha</label>
+                    <input type="datetime-local" id="evFecha" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Lugar</label>
+                    <input type="text" id="evLugar" class="form-control" placeholder="Ej: Estadio Nacional" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Precio por tiquete (₡)</label>
+                    <input type="number" id="evPrecio" class="form-control" min="0" step="0.01" placeholder="0.00" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Cantidad disponible</label>
+                    <input type="number" id="evCantidad" class="form-control" min="1" placeholder="100" />
+                </div>
+
+                <button id="btnCrearEvento" class="btn btn-dark w-100">Crear Evento</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('btnCrearEvento').addEventListener('click', async () => {
+            const nombre = document.getElementById('evNombre').value.trim();
+            const fecha = document.getElementById('evFecha').value;
+            const lugar = document.getElementById('evLugar').value.trim();
+            const precio = parseFloat(document.getElementById('evPrecio').value);
+            const cantidadDisponible = parseInt(document.getElementById('evCantidad').value);
+            const alertEl = document.getElementById('alertCrear');
+
+            if (!nombre || !fecha || !lugar || isNaN(precio) || isNaN(cantidadDisponible)) {
+                showAlert(alertEl, 'danger', 'Por favor completa todos los campos.');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/eventos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ nombre, fecha, lugar, precio, cantidadDisponible })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    showAlert(alertEl, 'success', '✅ Evento creado correctamente.');
+                    // Limpiar campos
+                    ['evNombre','evFecha','evLugar','evPrecio','evCantidad']
+                        .forEach(id => document.getElementById(id).value = '');
+                } else if (res.status === 403 || res.status === 401) {
+                    showAlert(alertEl, 'danger', 'No tienes permiso para crear eventos.');
+                } else {
+                    showAlert(alertEl, 'danger', data.message || 'Error al crear el evento.');
+                }
+            } catch {
+                showAlert(alertEl, 'danger', 'Error de conexión.');
+            }
+        });
+
+        function showAlert(el, type, msg) {
+            el.className = `alert alert-${type}`;
+            el.textContent = msg;
+        }
+    </script>
+}

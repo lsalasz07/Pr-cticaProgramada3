@@ -1,0 +1,85 @@
+﻿@{
+    ViewData["Title"] = "Registro";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <h3 class="card-title text-center mb-4">📝 Crear Cuenta</h3>
+
+                <div id="alertReg" class="alert d-none"></div>
+
+                <div class="mb-3">
+                    <label class="form-label">Correo electrónico</label>
+                    <input type="email" id="regEmail" class="form-control" placeholder="correo@ejemplo.com" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Contraseña</label>
+                    <input type="password" id="regPassword" class="form-control" placeholder="Mínimo 6 caracteres" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Confirmar contraseña</label>
+                    <input type="password" id="regConfirm" class="form-control" placeholder="Repetir contraseña" />
+                </div>
+                <button id="btnRegister" class="btn btn-dark w-100">Registrarse</button>
+
+                <p class="text-center mt-3 mb-0">
+                    ¿Ya tienes cuenta? <a href="/Account/Login">Inicia sesión</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('btnRegister').addEventListener('click', async () => {
+            const email = document.getElementById('regEmail').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('regConfirm').value;
+            const alert = document.getElementById('alertReg');
+
+            if (!email || !password || !confirmPassword) {
+                showAlert(alert, 'danger', 'Por favor completa todos los campos.');
+                return;
+            }
+
+            if (password.length < 6) {
+                showAlert(alert, 'danger', 'La contraseña debe tener al menos 6 caracteres.');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showAlert(alert, 'danger', 'Las contraseñas no coinciden.');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ email, password, confirmPassword })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    showAlert(alert, 'success', data.message + ' Redirigiendo...');
+                    setTimeout(() => window.location.href = '/Account/Login', 1500);
+                } else {
+                    showAlert(alert, 'danger', data.message);
+                }
+            } catch {
+                showAlert(alert, 'danger', 'Error de conexión.');
+            }
+        });
+
+        function showAlert(el, type, msg) {
+            el.className = `alert alert-${type}`;
+            el.textContent = msg;
+        }
+    </script>
+}

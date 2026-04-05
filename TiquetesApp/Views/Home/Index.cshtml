@@ -1,0 +1,148 @@
+﻿@{
+    ViewData["Title"] = "Eventos Disponibles";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2 class="mb-4">🎉 Eventos Disponibles</h2>
+
+<div id="alertEvento" class="alert d-none"></div>
+<div id="listaEventos" class="row g-3">
+    <div class="col-12 text-center text-muted">Cargando eventos...</div>
+</div>
+
+<div class="modal fade" id="modalCompra" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">🎟️ Comprar Tiquetes</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="alertCompra" class="alert d-none"></div>
+                <input type="hidden" id="compraEventoId" />
+                <div class="mb-3">
+                    <label class="form-label">Nombre del cliente</label>
+                    <input type="text" id="compraNombre" class="form-control" placeholder="Tu nombre completo" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Cantidad de tiquetes</label>
+                    <input type="number" id="compraCantidad" class="form-control" min="1" value="1" />
+                </div>
+                <p class="fw-bold">Total estimado: <span id="totalEstimado">₡0.00</span></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-dark" id="btnConfirmarCompra">Confirmar Compra</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let precioActual = 0;
+        const modal = new bootstrap.Modal(document.getElementById('modalCompra'));
+
+        async function cargarEventos() {
+            try {
+                const res = await fetch('/api/eventos', { credentials: 'include' });
+
+                if (res.status === 401) {
+                    window.location.href = '/Account/Login';
+                    return;
+                }
+
+                const eventos = await res.json();
+                const contenedor = document.getElementById('listaEventos');
+
+                if (eventos.length === 0) {
+                    contenedor.innerHTML = '<div class="col-12 text-center text-muted">No hay eventos disponibles.</div>';
+                    return;
+                }
+
+                contenedor.innerHTML = eventos.map(e => `
+                    <div class="col-md-4">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title">${e.nombre}</h5>
+                                <p class="card-text text-muted mb-1">📅 ${new Date(e.fecha).toLocaleDateString('es-CR')}</p>
+                                <p class="card-text text-muted mb-1">📍 ${e.lugar}</p>
+                                <p class="card-text mb-1">💰 ₡${e.precio.toFixed(2)}</p>
+                                <p class="card-text mb-3">
+                                    <span class="badge ${e.cantidadDisponible > 0 ? 'bg-success' : 'bg-danger'}">
+                                        ${e.cantidadDisponible > 0 ? e.cantidadDisponible + ' disponibles' : 'Agotado'}
+                                    </span>
+                                </p>
+                                <button class="btn btn-dark btn-sm w-100"
+                                    ${e.cantidadDisponible === 0 ? 'disabled' : ''}
+                                    onclick="abrirModalCompra(${e.id}, ${e.precio})">
+                                    🎟️ Comprar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch {
+                document.getElementById('listaEventos').innerHTML =
+                    '<div class="col-12 text-center text-danger">Error al cargar eventos.</div>';
+            }
+        }
+
+        function abrirModalCompra(eventoId, precio) {
+            precioActual = precio;
+            document.getElementById('compraEventoId').value = eventoId;
+            document.getElementById('compraNombre').value = '';
+            document.getElementById('compraCantidad').value = 1;
+            document.getElementById('totalEstimado').textContent = '₡' + precio.toFixed(2);
+            document.getElementById('alertCompra').className = 'alert d-none';
+            modal.show();
+        }
+
+        document.getElementById('compraCantidad').addEventListener('input', function () {
+            const cantidad = parseInt(this.value) || 0;
+            document.getElementById('totalEstimado').textContent = '₡' + (precioActual * cantidad).toFixed(2);
+        });
+
+        document.getElementById('btnConfirmarCompra').addEventListener('click', async () => {
+            const eventoId = parseInt(document.getElementById('compraEventoId').value);
+            const nombreCliente = document.getElementById('compraNombre').value.trim();
+            const cantidad = parseInt(document.getElementById('compraCantidad').value);
+            const alertCompra = document.getElementById('alertCompra');
+
+            if (!nombreCliente || cantidad < 1) {
+                showAlert(alertCompra, 'danger', 'Por favor completa todos los campos correctamente.');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/compras', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ eventoId, nombreCliente, cantidad })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    showAlert(alertCompra, 'success', '✅ ' + data.message);
+                    setTimeout(() => {
+                        modal.hide();
+                        cargarEventos();
+                    }, 1200);
+                } else {
+                    showAlert(alertCompra, 'danger', data.message);
+                }
+            } catch {
+                showAlert(alertCompra, 'danger', 'Error al procesar la compra.');
+            }
+        });
+
+        function showAlert(el, type, msg) {
+            el.className = `alert alert-${type}`;
+            el.textContent = msg;
+        }
+
+        cargarEventos();
+    </script>
+}
