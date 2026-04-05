@@ -28,14 +28,38 @@ namespace TiquetesApp.Controllers.API
             if (!success)
                 return BadRequest(new { message });
 
-            return Ok(new { message, compra });
+            return Ok(new
+            {
+                message,
+                compra = new
+                {
+                    compra!.Id,
+                    compra.EventoId,
+                    compra.NombreCliente,
+                    compra.Cantidad,
+                    compra.Total,
+                    compra.FechaCompra
+                }
+            });
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
             var compras = await _service.GetAllAsync();
-            return Ok(compras);
+
+            var resultado = compras.Select(c => new
+            {
+                c.Id,
+                c.EventoId,
+                eventoNombre = c.Evento != null ? c.Evento.Nombre : "N/A",
+                c.NombreCliente,
+                c.Cantidad,
+                c.Total,
+                c.FechaCompra
+            });
+
+            return Ok(resultado);
         }
     }
 }

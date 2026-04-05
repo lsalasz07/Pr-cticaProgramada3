@@ -31,7 +31,7 @@
                 const filas = compras.map(c => `
                     <tr>
                         <td>${c.id}</td>
-                        <td>${c.evento ? c.evento.nombre : 'N/A'}</td>
+                        <td>${c.eventoNombre}</td>
                         <td>${c.nombreCliente}</td>
                         <td>${c.cantidad}</td>
                         <td>₡${c.total.toFixed(2)}</td>
